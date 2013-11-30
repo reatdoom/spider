@@ -1,0 +1,25 @@
+html,body,h1,span,div {
+    margin:0;
+    padding:0;
+}
+
+body {
+    height:100%;
+    width:100%;
+}
+
+h1 {
+    margin:25px auto;
+    text-align:center;
+}
+
+span {
+    display:block;
+    margin:10px auto;
+    text-align:center;
+    font-size:0.8em;
+}
+
+div {
+    margin:auto 20%;
+}

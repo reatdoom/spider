@@ -1,0 +1,84 @@
+#!/bin/bash
+
+URL=$1
+MAX=$2
+dir=$3
+web=${URL%\/*}
+echo $web
+
+#################### 删除临时文件 #################### 
+
+if [ -f list.txt ]
+then
+    rm list.txt
+fi
+
+#################### 函数定义 ####################
+
+function getNextPageURL {
+    URL=`curl -s "$URL"|iconv -f GBK -t UTF8|sed -n -e 's@.*<a title="下一页" href="./\([^"]*\)">.*</span>@\1@p'|sed -n -e '1p'|sed -e 's@[\x09\x0d\x20]@@g'`
+    
+    if [ $URL = "" ]
+    then
+        break
+    fi
+
+    URL="$web/$URL"
+}
+
+function getURL {
+    curl -s $1 |iconv -f GBK -t UTF8|sed -n -e 's@<li><a href=\"\([^\"]*\)\" target=\"_blank\">\([^<]*\)</a><span>(\([^)]*\) [^<]*)</span></li>@\1,[\3]\2@p'|sed 's/[\x09\x20\x0d]//g' 
+}
+
+function content {
+    curl -s $1|iconv -f GBK -t utf8 |sed -n -e 's@<h1 id="artibodyTitle" [^>]*>\([^<]*\)</h1>@<h1>\1</h1>@p;s@<span id="pub_date">\([^<]*\)</span>.*</a>@<span>\1</span><div>@p;s@<p>\([^<]*\)</p>@<p>\1</p>@p'|sed -e 's/[\x20\x09]//g'
+}
+
+#################### 获取新闻链接 ####################
+
+for ((i=0;i<$MAX;i++))
+do
+    getURL $URL >>list.txt
+    getNextPageURL 
+    echo nextpage:$URL
+    sleep 2
+done
+
+#################### 下载正文部分#################### 
+
+count=0
+
+while read line
+do 
+    link=${line%%,*}
+    title=${line##*,}
+
+    if [ -f $dir/$title.html ]
+    then
+        rm $dir/$title.html
+    fi
+    
+    echo "<html>
+    <head>
+    <meta charset="UTF8">
+        <title>$title</title>
+        <style type=\"text/css\" media=\"screen\">
+            @import \"base.css\";
+        </style>
+    </head>
+    <body>">$dir/$title.html
+
+    content $link >>$dir/$title.html
+    echo "
+</div>
+<div>来源:<a href=\"$link\">$link</a></div>
+</body>
+</html>">>$dir/$title.html
+
+done<list.txt
+
+# 删除临时文件
+
+/bin/rm list.txt
+
+exit 0
